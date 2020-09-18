@@ -147,14 +147,13 @@ int main(void)
     glAttachShader(shaderProgram, fShader);
     // bind attributes
     glBindAttribLocation(shaderProgram, 0, "pos");
-    //glBindAttribLocation(shaderProgram, 1, "color");
+    glBindAttribLocation(shaderProgram, 1, "color");
     glLinkProgram(shaderProgram);
     // check if link succeeded
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &paramValue);
     if (paramValue != GL_TRUE) {
         GLchar infoLog[500];
         glGetProgramInfoLog(shaderProgram, 500, NULL, infoLog);
-        cout << "asdf\n";
         std::cout << "shaderProgram - link error\n";
         cout << infoLog;
     } else {
@@ -174,27 +173,28 @@ int main(void)
     // set current program
     glUseProgram(shaderProgram);
     //  enable the attribute array indices
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)3);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)3);
     glEnableVertexAttribArray(0);
-    //glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(1);
 
     // shader program setup done; simulation objects should manage vertex buffers
 
     float vertices[] = {
-        -0.5f, -0.5f, 0.0f, // left  
-         0.5f, -0.5f, 0.0f, // right 
-         0.0f,  0.5f, 0.0f  // top   
+        0.5f, 0.5f, 0.0f,       1.0f, 0.0f, 0.0f,
+        0.0f, 0.5f, 0.0f,       0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 1.0f,
     };
 
     GLuint vbuf;
     glGenBuffers(1, &vbuf);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbuf);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
     {
         /******************** n-body simulation ********************/
