@@ -5,6 +5,9 @@
 
 #include <glad/glad.h>
 
+#define VERTEX_DATA_SIZE                (6 * sizeof(float))
+#define VERTEX_ELEMENT_FLOAT_COUNT      (VERTEX_DATA_SIZE / sizeof(float))
+
 class ShaderProgram
 {
 public:

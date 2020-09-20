@@ -49,9 +49,11 @@ static GLuint compileShader(GLenum shaderType, const std::string &path)
 
     // print out the log
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &param);
-    vector<char> log(param);
-    glGetShaderInfoLog(shader, param, nullptr, log.data());
-    cout << log.data();
+    if (param > 0) {
+        vector<char> log(param);
+        glGetShaderInfoLog(shader, param, nullptr, log.data());
+        cout << log.data();
+    }
 
     return shader;
 }
@@ -83,7 +85,9 @@ ShaderProgram::ShaderProgram(const std::string &vShaderPath, const std::string &
 
     // print out the log
     glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &param);
-    vector<char> log(param);
-    glGetProgramInfoLog(programID, param, nullptr, log.data());
-    cout << log.data();
+    if (param > 0) {
+        vector<char> log(param);
+        glGetProgramInfoLog(programID, param, nullptr, log.data());
+        cout << log.data();
+    }
 }
