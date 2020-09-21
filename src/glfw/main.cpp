@@ -2,18 +2,25 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <string>
 
 #include "ShaderProgram.h"
-#include "Simulation.h"
+#include "PlanetRingSim.h"
 
 using namespace std;
 
-static const int N_PARTICLES = 2;
+static const int N_PARTICLES = 8;
 static const double dt = 1;
+
+void handleMouse(GLFWwindow *window, ShaderProgram &program);
+void resizeViewport(GLFWwindow* window, GLsizei width, GLsizei height);
 
 int main(void)
 {
@@ -30,7 +37,7 @@ int main(void)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(800, 800, "Hello World", NULL, NULL);
     if (!window)
     {
         std::cout << "GLFW - failed to create window\n";
@@ -40,6 +47,9 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
+
+    // set callbacks
+    glfwSetFramebufferSizeCallback(window, resizeViewport);
 
     // load GLAD opengl function pointers
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -55,42 +65,26 @@ int main(void)
     // set current program
     glUseProgram(shaderProgram.ID());
     //  enable the attribute array indices
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)3);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+
+    glEnable(GL_DEPTH_TEST);  
 
     // shader program setup done; simulation objects should manage vertex buffers
 
-    float vertices[] = {
-        0.5f, 0.5f, 0.0f,       1.0f, 0.0f, 0.0f,
-        0.0f, 0.5f, 0.0f,       0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 1.0f,
-    };
-
-    GLuint vbuf;
-    glGenBuffers(1, &vbuf);
-    glBindBuffer(GL_ARRAY_BUFFER, vbuf);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
     {
         /******************** n-body simulation ********************/
-        //Simulation sim(N_PARTICLES, 1, shaderProgram);
+        PlanetRingSim sim(100, window, shaderProgram);
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
             /* Render here */
             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            //sim.draw();
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            sim.draw();
+            //sim.step(0.1f);
 
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
@@ -104,4 +98,9 @@ int main(void)
     glfwTerminate();
 
     return 0;
+}
+
+void resizeViewport(GLFWwindow* window, GLsizei width, GLsizei height)
+{
+    glViewport(0, 0, width, height);
 }

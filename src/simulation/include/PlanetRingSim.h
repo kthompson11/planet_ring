@@ -10,11 +10,13 @@
 
 #include "Particle.h"
 #include "NBodySimulation.h"
+#include "OriginCamera.h"
+#include "ShaderProgram.h"
 
 class PlanetRingSim
 {
 public:
-    PlanetRingSim(unsigned int nMoonParticles, GLuint shaderID);
+    PlanetRingSim(unsigned int nMoonParticles, GLFWwindow *window, ShaderProgram &program);
     ~PlanetRingSim();
 
     /* Steps the simulation by on time interval */
@@ -27,12 +29,14 @@ public:
 
 private:
     NBodySimulation nBodySim;
+    OriginCamera camera;
+    ShaderProgram &shaderProgram;
+    GLFWwindow *window;
 
     int nMoonParticles;
     double t = 0;
     std::vector<arma::vec3> particleColors;
 
-    GLuint shaderID;
     GLuint particleBuffer = 0;
     GLuint sphereBuffer = 0;
     std::vector<float> pointVertices;

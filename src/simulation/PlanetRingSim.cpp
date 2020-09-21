@@ -27,6 +27,14 @@ static void writeVertex(vector<float> &buf, const vec3 &vertex, const vec3 &colo
     buf.push_back(color[2]);
 }
 
+static vec3 sphericalToCartesian(double theta, double phi, double radius)
+{
+    vec3 res = {cos(theta) * sin(phi), sin(theta) * sin(phi), cos(phi)};
+    res = radius * res;
+
+    return res;
+}
+
 static vector<float> calcSphereVertices(unsigned int thetaSteps, unsigned int phiSteps)
 {
     double thetaStep = 2 * M_PI / thetaSteps;
@@ -41,10 +49,10 @@ static vector<float> calcSphereVertices(unsigned int thetaSteps, unsigned int ph
             double phi = j * phiStep;
             double nextPhi = (j + 1) * phiStep;
 
-            vec3 topLeft = {cos(theta) * sin(phi), sin(theta) * sin(phi), cos(phi)};
-            vec3 topRight = {cos(nextTheta) * sin(phi), sin(nextTheta) * sin(phi), cos(phi)};
-            vec3 bottomLeft = {cos(theta) * sin(nextPhi), sin(theta) * sin(nextPhi), cos(nextPhi)};
-            vec3 bottomRight = {cos(nextTheta) * sin(nextPhi), sin(nextTheta) * sin(nextPhi), cos(nextPhi)};
+            vec3 topLeft = sphericalToCartesian(theta, phi, 1.0);
+            vec3 topRight = sphericalToCartesian(nextTheta, phi, 1.0);
+            vec3 bottomLeft = sphericalToCartesian(theta, nextPhi, 1.0);
+            vec3 bottomRight = sphericalToCartesian(nextTheta, nextPhi, 1.0);
 
             // first triangle
             writeVertex(sphereVertices, topLeft, {1.0f, 0.0f, 0.0f});
@@ -57,13 +65,24 @@ static vector<float> calcSphereVertices(unsigned int thetaSteps, unsigned int ph
         }
     }
 
+    // TODO: remove this
+    #ifdef COMMENTED_OUT
+    for (int i = 0; i < 200; i = i + 6) {
+        if (i % 18 == 0) {
+            cout << "**** New Triangle ****\n";
+        }
+        cout << "(" << sphereVertices[i] << ", " << sphereVertices[i+1] << ", " << sphereVertices[i+2] << "), ";
+        cout << sphereVertices[i+3] << ", " << sphereVertices[i+4] << ", " << sphereVertices[i+5] << ")" << endl;
+    }
+    #endif
+
     return sphereVertices;
 }
 
 /******************** Class Methods ********************/
 
-PlanetRingSim::PlanetRingSim(unsigned int nMoonParticles, GLuint shaderID) 
-    : shaderID(shaderID)
+PlanetRingSim::PlanetRingSim(unsigned int nMoonParticles, GLFWwindow *window, ShaderProgram &program) 
+    : shaderProgram(program), camera(0, 90, -0.5, 0.5, 40000e3, program), window(window)
 {
     glGenBuffers(1, &particleBuffer);
     glGenBuffers(1, &sphereBuffer);
@@ -86,10 +105,12 @@ void PlanetRingSim::reset(unsigned int nMoonParticles)
     this->nMoonParticles = nMoonParticles;
     
     // create planet
-    nBodySim.addParticle(Particle(10000.0, 0.3, vec3({0.0, 0.0, 0.0}), vec3({0.0, 0.0, 0.0})));
+    const double planetMass = 5.97e24;
+    const double planetRadius = 6.378e6;
+    nBodySim.addParticle(Particle(planetMass, planetRadius, vec3({0.0, 0.0, 0.0}), vec3({0.0, 0.0, 0.0})));
     particleColors.push_back(vec3()); // dummy element
 
-    // create moon particles
+    // create moon
     for (int i = 0; i < 200; ++i) {
         double x = static_cast<double>(rand()) / RAND_MAX * 2 - 1;
         double y = static_cast<double>(rand()) / RAND_MAX * 2 - 1;
@@ -98,22 +119,42 @@ void PlanetRingSim::reset(unsigned int nMoonParticles)
         /* TODO: assign color here */
         particleColors.push_back(vec3({1.0f, 1.0f, 1.0f}));
     }
+
+    #ifdef COMMENTED_OUT
+    // TODO: add better moon generation (HCP)
+    const double moonRadius = 1737e3;
+    const double moonMass = 7.34e22;
+    double moonVolume = M_PI * moonRadius * moonRadius;
+    double particleVolume = moonVolume * 0.74; // multiply by sphere close pack ratio
+    particleVolume /= nMoonParticles;
+    double particleRadius = sqrt(particleVolume / M_PI);
+    double particleMass = moonMass / nMoonParticles;
+    double F_gravity = 6.67e-11 * moonMass * 
+    for (int i = 0; i < nMoonParticles; ++i) {
+        nBodySim.addParticle(Particle(particleMass, particleVolume, ))
+    }
+    #endif
 }
 
 void PlanetRingSim::draw()
 {
+    /* update camera */
+    camera.update(window, shaderProgram);
+
     glm::mat4 model;
     GLint modelLocation;
     const vector<Particle>& particles = nBodySim.getParticles();
 
+    
     // draw planet
     glBindBuffer(GL_ARRAY_BUFFER, sphereBuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    modelLocation = glGetUniformLocation(shaderID, "model");
+    modelLocation = glGetUniformLocation(shaderProgram.ID(), "model");
     const Particle &particle = particles[PLANET_INDEX];
     float r = particle.getRadius();
     const vec3 &pos = particle.getPosition();
+    model = glm::mat4(1.0f);
     model = glm::translate(glm::mat4(1.0f), glm::vec3(pos[0], pos[1], pos[2]));
     model = glm::scale(model, glm::vec3(r, r, r));
     glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
@@ -124,7 +165,7 @@ void PlanetRingSim::draw()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     model = glm::mat4(1.0f);
-    modelLocation = glGetUniformLocation(shaderID, "model");
+    modelLocation = glGetUniformLocation(shaderProgram.ID(), "model");
     glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
     pointVertices.clear();
     for (int i = MOON_START_INDEX; i < particles.size(); ++i) {
@@ -141,6 +182,31 @@ void PlanetRingSim::draw()
     }
     glBufferData(GL_ARRAY_BUFFER, pointVertices.size() * sizeof(pointVertices[0]), pointVertices.data(), GL_DYNAMIC_DRAW);
     glDrawArrays(GL_POINTS, 0, pointVertices.size() / VERTEX_ELEMENT_FLOAT_COUNT);
+    
+
+    #ifdef COMMENTED_OUT
+    float vertices[] = {
+        0.5f, 0.5f, 0.5f,       1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, 0.5f,     1.0f, 0.0f, 0.0f,
+        0.5f, -0.5f, 0.5f,      1.0f, 0.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
+        0.5f, -0.5f, 1.0f,     0.0f, 1.0f, 0.0f
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, particleBuffer);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    model = glm::mat4(1.0f);
+    modelLocation = glGetUniformLocation(shaderID, "model");
+    glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+    pointVertices.clear();
+    for (int i = 0; i < sizeof(vertices) / sizeof(float); ++i) {
+        pointVertices.push_back(vertices[i]);
+    }
+    glBufferData(GL_ARRAY_BUFFER, pointVertices.size() * sizeof(pointVertices[0]), pointVertices.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, pointVertices.size() / VERTEX_ELEMENT_FLOAT_COUNT);
+    #endif
 }
 
 void PlanetRingSim::step(double dt)
