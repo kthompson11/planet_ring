@@ -1,0 +1,4 @@
+Improve moon generation using HCP or FCC structures
+Move camera system out of simulation
+Color planet and particles
+Add Qt front end
