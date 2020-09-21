@@ -28,7 +28,7 @@ LIBS := -lglfw -lGL -ldl -larmadillo
 LIB_SEARCHDIRs := -L
 
 # Flags
-DEBUG_FLAGS = 
+DEBUG_FLAGS = -g
 ASFLAGS = 
 CFLAGS = 
 LDFLAGS = $(LIBS)
@@ -42,13 +42,13 @@ shaders :
 
 $(OUT_NAME) : $(OBJ)
 	@echo $(SRC)
-	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+	$(CXX) $(OBJ) $(DEBUG_FLAGS) -o $@ $(LDFLAGS)
 
 %.o : %.cpp
-	$(CXX) -c $(CFLAGS) $(INCDIRS) $< -o $@
+	$(CXX) -c $(CFLAGS) $(DEBUG_FLAGS) $(INCDIRS) $< -o $@
 
 %.o : %.c
-	$(CC) -c $(CFLAGS) $(INCDIRS) $< -o $@
+	$(CC) -c $(CFLAGS) $(DEBUG_FLAGS) $(INCDIRS) $< -o $@
 
 clean :
 	rm -f $(OBJ)

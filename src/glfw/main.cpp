@@ -74,7 +74,7 @@ int main(void)
 
     {
         /******************** n-body simulation ********************/
-        PlanetRingSim sim(100, window, shaderProgram);
+        PlanetRingSim sim(200, window, shaderProgram);
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
@@ -84,7 +84,7 @@ int main(void)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             sim.draw();
-            //sim.step(0.1f);
+            sim.step(1);
 
             /* Swap front and back buffers */
             glfwSwapBuffers(window);

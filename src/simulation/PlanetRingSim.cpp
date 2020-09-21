@@ -79,10 +79,27 @@ static vector<float> calcSphereVertices(unsigned int thetaSteps, unsigned int ph
     return sphereVertices;
 }
 
+static vec3 getMoonParticlePosition(const vec3 &moonCenter, double moonRadius)
+{
+    vec3 offset;
+    double x = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+    double y = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+    double z = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+    offset = vec3({x, y, z});
+    while (sqrt(arma::dot(offset, offset)) > moonRadius) {
+        x = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+        y = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+        z = static_cast<double>(rand()) / RAND_MAX * 2 * moonRadius - moonRadius;
+        offset = vec3({x, y, z});
+    }
+
+    return moonCenter + offset;
+}
+
 /******************** Class Methods ********************/
 
 PlanetRingSim::PlanetRingSim(unsigned int nMoonParticles, GLFWwindow *window, ShaderProgram &program) 
-    : shaderProgram(program), camera(0, 90, -0.5, 0.5, 40000e3, program), window(window)
+    : shaderProgram(program), camera(0, 90, -0.5, 0.5, 60000e3, program), window(window)
 {
     glGenBuffers(1, &particleBuffer);
     glGenBuffers(1, &sphereBuffer);
@@ -105,11 +122,12 @@ void PlanetRingSim::reset(unsigned int nMoonParticles)
     this->nMoonParticles = nMoonParticles;
     
     // create planet
-    const double planetMass = 5.97e24;
+    const double planetMass = 5.97e25;
     const double planetRadius = 6.378e6;
     nBodySim.addParticle(Particle(planetMass, planetRadius, vec3({0.0, 0.0, 0.0}), vec3({0.0, 0.0, 0.0})));
     particleColors.push_back(vec3()); // dummy element
 
+    #ifdef COMMENTED_OUT
     // create moon
     for (int i = 0; i < 200; ++i) {
         double x = static_cast<double>(rand()) / RAND_MAX * 2 - 1;
@@ -119,21 +137,24 @@ void PlanetRingSim::reset(unsigned int nMoonParticles)
         /* TODO: assign color here */
         particleColors.push_back(vec3({1.0f, 1.0f, 1.0f}));
     }
+    #endif
 
-    #ifdef COMMENTED_OUT
-    // TODO: add better moon generation (HCP)
+    // TODO: add better moon generation (HCP or FCC)
     const double moonRadius = 1737e3;
     const double moonMass = 7.34e22;
+    const double moonOrbitRadius = 10000e3;
     double moonVolume = M_PI * moonRadius * moonRadius;
     double particleVolume = moonVolume * 0.74; // multiply by sphere close pack ratio
     particleVolume /= nMoonParticles;
     double particleRadius = sqrt(particleVolume / M_PI);
     double particleMass = moonMass / nMoonParticles;
-    double F_gravity = 6.67e-11 * moonMass * 
+    double F_gravity = 6.67e-11 * moonMass * planetMass / (moonOrbitRadius * moonOrbitRadius);  // force between moon and planet
+    double moonVelocity = sqrt(F_gravity * moonOrbitRadius / moonMass);
     for (int i = 0; i < nMoonParticles; ++i) {
-        nBodySim.addParticle(Particle(particleMass, particleVolume, ))
+        vec3 pos = getMoonParticlePosition(vec3({moonOrbitRadius, 0, 0}), moonRadius);
+        nBodySim.addParticle(Particle(particleMass, particleRadius, pos, vec3({0.0, moonVelocity, 0.0})));
+        particleColors.push_back(vec3({1.0f, 1.0f, 1.0f}));
     }
-    #endif
 }
 
 void PlanetRingSim::draw()

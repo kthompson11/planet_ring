@@ -60,7 +60,7 @@ void Particle::interact(Particle &other, double dt)
     double F = G * mass * other.mass / arma::dot(diff, diff);
 
     velocity = velocity - displacementDirection * F / mass * dt;
-    other.velocity = other.velocity + displacementDirection * F / mass * dt;
+    other.velocity = other.velocity + displacementDirection * F / other.mass * dt;
 }
 
 void Particle::step(double t)
